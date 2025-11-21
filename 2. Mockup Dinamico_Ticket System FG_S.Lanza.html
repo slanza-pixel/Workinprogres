@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mockup Sistema Ticketing – Fulmine Group</title>
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" href="https://play-lh.googleusercontent.com/GXzaEiqjwZnM9aQtyqPgzW2PW4n-Jxk6YhRuGW7qsy7ld3Fbteco3TDidOvMpTEsSNQ=w48-h48-rw" />
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body { font-family: 'Roboto', sans-serif; margin:0; padding:0; background:#f5f5f5; color:#222; position: relative; z-index: 1; }
+body::after {
+  content: '';
+  background: url('https://as1.ftcdn.net/v2/jpg/00/80/32/10/1000_F_80321046_CrByirSUZb3Xw6XHNTuMVBS6GgyxyEL0.jpg') no-repeat center center;
+  background-size: cover;
+  opacity: 0.08;
+  top: 0; left: 0; bottom: 0; right: 0;
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+}
+header { background-color:#FF8000; color:white; padding:16px; text-align:center; display:flex; align-items:center; justify-content:center; position: relative; z-index: 2; }
+header img { max-width: 300px; height:auto; filter: brightness(0) invert(1); }
+.container { padding:20px; max-width:1200px; margin:auto; position: relative; z-index: 2; }
+.card { background:white; border:1px solid #ccc; border-radius:6px; padding:16px; margin-bottom:20px; box-shadow:0 2px 6px rgba(0,0,0,0.1); position: relative; z-index:2; }
+h2 { color:#003366; margin-top:0; }
+.button-primary { background-color:#003366; color:white; padding:8px 16px; border:none; border-radius:4px; cursor:pointer; font-weight:500; }
+.button-secondary { background-color:#00A050; color:white; padding:8px 16px; border:none; border-radius:4px; cursor:pointer; font-weight:500; }
+input, textarea, select { width:100%; padding:8px; margin:8px 0 12px 0; border:1px solid #ccc; border-radius:4px; box-sizing:border-box; font-family: 'Roboto', sans-serif; font-size:14px; }
+textarea[readonly] { background:#fafafa; cursor:pointer; }
+select option.default { color: #aaa; }
+.ticket-list { list-style:none; padding:0; margin:0; max-height:250px; overflow-y:auto; }
+.ticket-item { padding:12px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; }
+.ticket-item:nth-child(even) { background:#f9f9f9; }
+.ticket-status { padding:4px 8px; border-radius:4px; color:white; font-size:12px; }
+.status-open { background-color:#00A050; }
+.status-feedback { background-color:#FF8000; }
+.status-closed { background-color:#666; }
+hr { border:none; border-top:1px solid #ccc; margin:16px 0; }
+.flow { margin-top: 10px; padding: 8px; background: #e6f0ff; border-radius: 4px; font-size:14px; }
+.flow div { margin-bottom: 6px; }
+.chart-container { display:flex; gap:20px; flex-wrap:wrap; justify-content:space-around; }
+canvas { max-width:400px; max-height:250px; }
+.status-checkboxes { display:flex; gap:10px; margin-top:10px; }
+.status-checkboxes label { display:flex; align-items:center; gap:4px; font-size:14px; }
+.progress-container { position: relative; background: #ffffff; border-radius:6px; height:24px; width:100%; margin-bottom:16px; overflow:hidden; }
+.progress-bar { background: #00aaff; height:100%; width:0%; border-radius:6px; position: relative; transition: width 0.4s linear; }
+.progress-marker { position: absolute; top:50%; transform: translateY(-50%); width:18px; height:18px; pointer-events:none; transition:left 0.5s; }
+.progress-marker svg { width: 100%; height: 100%; fill: none; stroke: white; stroke-width: 2; }
+
+/* POPUP */
+#aiPopup { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.65); z-index:9999; justify-content:center; align-items:center; }
+#aiPopup[aria-hidden="false"] { display:flex; }
+#aiPopupContent { background:white; padding:20px; border-radius:8px; max-width:600px; width:92%; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,0.3); }
+#aiPopupContent img { max-width:100%; border-radius:6px; }
+#closePopup { margin-top:12px; background:#003366; color:white; padding:8px 16px; border:none; border-radius:4px; cursor:pointer; }
+.menu-choices { display:flex; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+.choice-btn { padding:8px 12px; border-radius:6px; border:1px solid #ccc; background:#f7f7f7; cursor:pointer; }
+.choice-btn.primary { background:#003366; color:white; border-color:#003366; }
+.choice-btn:focus { outline:2px solid #00aaff; outline-offset:2px; }
+</style>
+</head>
+
+<body>
+<header>
+  <img src="https://fulminegroup.it/wp-content/uploads/2022/07/Logo-FulmineGroup-2019_payoff-1536x369.png" alt="Fulmine Group Logo">
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Apri un Ticket</h2>
+    <form id="ticketForm" onsubmit="handleTicketSubmit(event)">
+      <label>Nome</label>
+      <input type="text" placeholder="Il tuo nome" required />
+      <label>Email</label>
+      <input type="email" id="emailField" placeholder="tuo@esempio.com" required />
+      <label>Richiedente</label>
+      <select required>
+        <option value="" class="default">Scegli</option>
+        <option>Cliente - Privato</option>
+        <option>Cliente - Pubblica Amministrazione</option>
+        <option>Cliente - Partnership Pubblico-Privato</option>
+        <option>Hub</option>
+        <option>Filiale</option>
+        <option>REPARTO INTERNO - Affari Generali</option>
+        <option>REPARTO INTERNO - Affari Istituzionali</option>
+        <option>REPARTO INTERNO - Amministrazione</option>
+        <option>REPARTO INTERNO - Area Network</option>
+        <option>REPARTO INTERNO - Back Office</option>
+        <option>REPARTO INTERNO - Business Care</option>
+        <option>REPARTO INTERNO - Customer Care</option>
+        <option>REPARTO INTERNO - Direzione Generale</option>
+        <option>REPARTO INTERNO - Gare</option>
+        <option>REPARTO INTERNO - ICT</option>
+        <option>REPARTO INTERNO - Marketing</option>
+        <option>REPARTO INTERNO - Produzione</option>
+        <option>REPARTO INTERNO - Presidenza</option>
+        <option>REPARTO INTERNO - Qualità</option>
+        <option>REPARTO INTERNO - Rendicontazione</option>
+        <option>REPARTO INTERNO - Salesforce</option>
+        <option>REPARTO INTERNO - Sportello</option>
+        <option>Operatore esterno</option>
+        <option>Software House</option>
+        <option>Corriere</option>
+        <option>Service di stampa</option>
+      </select>
+      <label>Prodotto</label>
+      <select>
+        <option value="" class="default">Scegli</option>
+        <option>Posta Ordinaria</option>
+        <option>Posta Raccomandata</option>
+        <option>Notifiche</option>
+        <option>Parcel</option>
+      </select>
+      <label>Categoria</label>
+      <select>
+        <option value="" class="default">Scegli</option>
+        <option>Segnalazione</option>
+        <option>Richiesta</option>
+        <option>Reclamo</option>
+        <option>Supporto tecnico</option>
+      </select>
+      <label>Descrizione</label>
+      <textarea id="descArea" rows="4" placeholder="Descrivi il problema o la richiesta (clicca per supporto IA)"></textarea>
+      <label>Allega File</label>
+      <input type="file" />
+      <div class="status-checkboxes">
+        <label><input type="checkbox" name="ticketStatus" value="Aperto" checked /> Aperto</label>
+        <label><input type="checkbox" name="ticketStatus" value="In attesa di feedback" /> Attesa Feedback</label>
+        <label><input type="checkbox" name="ticketStatus" value="Chiuso" /> Chiuso</label>
+      </div>
+      <button class="button-primary" type="submit">Invia Ticket</button>
+    </form>
+    <div id="ticketConfirmation" style="margin-top:10px; color:#003366; font-weight:500;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Dettaglio TicketFul_20251114_039</h2>
+    <p><strong>Categoria:</strong> Richiesta</p>
+    <p><strong>Stato:</strong> In lavorazione</p>
+    <p><strong>Assegnato a:</strong> Produzione</p>
+    <label>Avanzamento Ticket:</label>
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+      <div class="progress-marker" id="progressMarker" style="left:calc(0% - 9px);">
+        <svg viewBox="0 0 24 24"><path d="M2 4h20v16H2V4zm0 0l10 8 10-8"/></svg>
+      </div>
+    </div>
+    <div class="status-checkboxes">
+      <label><input type="checkbox" name="ticketStatusDetail" value="Aperto" checked /> Aperto</label>
+      <label><input type="checkbox" name="ticketStatusDetail" value="In attesa di feedback" /> Attesa Feedback</label>
+      <label><input type="checkbox" name="ticketStatusDetail" value="Chiuso" /> Chiuso</label>
+    </div>
+    <label>Note interne:</label>
+    <textarea rows="3" placeholder="Aggiungi una nota interna..."></textarea>
+    <button class="button-secondary">Aggiungi nota</button>
+    <hr />
+    <p><strong>Messaggi utente:</strong></p>
+    <div style="background:#f1f1f1; padding:8px; border-radius:4px;">
+      <p><em>Cliente:</em> Acquedotto Pugliese_Avrei bisogno del report del mese appena trascorso.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Dashboard Assegnazioni</h2>
+    <p><strong>Flusso richiesta:</strong> Reparto ICT → Reparto Operativo</p>
+    <ul class="ticket-list">
+      <li class="ticket-item"><span>TicketFul_20251119_002 – Richiesta CAP serviti</span><span class="ticket-status status-open">Aperto</span></li>
+      <li class="ticket-item"><span>TicketFul_20251119_003 – Segnalazione anomalia app Last Mile</span><span class="ticket-status status-feedback">In attesa di feedback</span></li>
+      <li class="ticket-item"><span>TicketFul_20251119_004 – Richiesta report PagoPA</span><span class="ticket-status status-closed">Chiuso</span></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Dashboard Operatore</h2>
+    <p><strong>Flusso richiesta:</strong> Reparto Produzione → Reparto ICT</p>
+    <ul class="ticket-list">
+      <li class="ticket-item"><span>TicketFul_20251119_005 – Problema software</span><span class="ticket-status status-open">Aperto</span></li>
+      <li class="ticket-item"><span>TicketFul_20251119_006 – Richiesta supporto tecnico</span><span class="ticket-status status-feedback">In attesa di feedback</span></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Dashboard Supervisore</h2>
+    <p><strong>Ticket Totali:</strong> 124</p>
+    <p><strong>Ticket aperti:</strong> 45</p>
+    <p><strong>Ticket in attesa di feedback:</strong> 7</p>
+    <p><strong>Tempo medio risoluzione:</strong> 2 giorni</p>
+    <p><strong>Performance operatori:</strong></p>
+    <ul>
+      <li>Hub Milano: 95% ticket risolti</li>
+      <li>Hub Palermo: 88% ticket risolti</li>
+      <li>IT interno: 92% ticket risolti</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>KPI & Grafici</h2>
+    <div class="chart-container">
+      <canvas id="categoryChart"></canvas>
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<div id="aiPopup" aria-hidden="true">
+  <div id="aiPopupContent" role="dialog" aria-modal="true" aria-labelledby="aiTitle">
+    <h3 id="aiTitle">Supporto con IA</h3>
+    <p>Seleziona l'opzione per il supporto IA oppure chiudi il popup.</p>
+    <div class="menu-choices" role="menu" aria-label="Scelte supporto IA">
+      <button class="choice-btn primary" id="optSupportoIA" type="button">Supporto con IA</button>
+      <button class="choice-btn" id="optAltro" type="button">Altre opzioni</button>
+    </div>
+    <div style="margin-top:12px;">
+      <img id="iaImage" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaaCG6P6mTTv8ga-T9o39Tbc-XikFRZKR-CA&s" alt="Immagine Supporto IA" />
+    </div>
+    <button id="closePopup">Chiudi</button>
+  </div>
+</div>
+
+<script>
+function handleTicketSubmit(event){
+  event.preventDefault();
+  const email = document.getElementById('emailField').value;
+  document.getElementById('ticketConfirmation').innerText = `Ticket inviato con successo! Risponderemo all'indirizzo: ${email}`;
+  event.target.reset();
+}
+
+const checkboxes = document.querySelectorAll('input[name="ticketStatus"]');
+checkboxes.forEach(cb => cb.addEventListener('change', function(){
+  if(this.checked) checkboxes.forEach(o => { if(o !== this) o.checked = false; });
+}));
+
+const progressBar = document.getElementById('progressBar');
+const progressMarker = document.getElementById('progressMarker');
+const detailCheckboxes = document.querySelectorAll('input[name="ticketStatusDetail"]');
+
+function animateProgress(targetPercent){
+  const start = parseFloat(progressBar.style.width) || 0;
+  const duration = 600;
+  const startTime = performance.now();
+  function step(now){
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const current = start + (targetPercent - start) * t;
+    progressBar.style.width = current + '%';
+    progressMarker.style.left = `calc(${current}% - 9px)`;
+    if(t < 1) requestAnimationFrame(step);
+    else {
+      progressBar.style.width = targetPercent + '%';
+      progressMarker.style.left = `calc(${targetPercent}% - 9px)`;
+    }
+  }
+  requestAnimationFrame(step);
+}
+animateProgress(33);
+
+detailCheckboxes.forEach(cb => cb.addEventListener('change', function(){
+  if(this.checked){
+    detailCheckboxes.forEach(o => { if(o !== this) o.checked = false; });
+    let percent = 0;
+    switch(this.value){
+      case "Aperto": percent = 33; break;
+      case "In attesa di feedback": percent = 66; break;
+      case "Chiuso": percent = 100; break;
+    }
+    animateProgress(percent);
+  } else {
+    const anyChecked = Array.from(detailCheckboxes).some(x => x.checked);
+    if(!anyChecked) animateProgress(0);
+  }
+}));
+
+const descArea = document.getElementById('descArea');
+const aiPopup = document.getElementById('aiPopup');
+const closePopupBtn = document.getElementById('closePopup');
+const optSupportoIA = document.getElementById('optSupportoIA');
+const iaImage = document.getElementById('iaImage');
+
+function openPopup(){
+  aiPopup.setAttribute('aria-hidden','false');
+  closePopupBtn.focus();
+}
+
+function closePopup(){
+  aiPopup.setAttribute('aria-hidden','true');
+  descArea.focus();
+}
+
+descArea.addEventListener('click', openPopup);
+descArea.addEventListener('keydown', function(e){
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    openPopup();
+  }
+});
+
+closePopupBtn.addEventListener('click', closePopup);
+aiPopup.addEventListener('click', function(e){
+  if(e.target === aiPopup) closePopup();
+});
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && aiPopup.getAttribute('aria-hidden') === 'false') closePopup();
+});
+
+optSupportoIA.addEventListener('click', function(){
+  iaImage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  iaImage.style.transition = 'transform 0.25s';
+  iaImage.style.transform = 'scale(1.02)';
+  setTimeout(()=> iaImage.style.transform = 'scale(1)', 260);
+});
+
+const ctxCat = document.getElementById('categoryChart').getContext('2d');
+new Chart(ctxCat,{
+  type:'doughnut',
+  data:{
+    labels:['Segnalazione','Richiesta','Reclamo','Supporto tecnico'],
+    datasets:[{
+      label:'Distribuzione Ticket',
+      data:[90,100,40,20],
+      backgroundColor:['#FF8000','#003366','#00A050','#FFCC00'],
+      borderColor:'#fff',
+      borderWidth:2
+    }]
+  },
+  options:{ responsive:true, plugins:{ legend:{ position:'bottom' } } }
+});
+
+const ctxTrend = document.getElementById('trendChart').getContext('2d');
+new Chart(ctxTrend,{
+  type:'line',
+  data:{
+    labels:['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'],
+    datasets:[
+      { label:'Ticket Aperto', data:[20,18,25,30,28,35,40,38,42,45,50,55], borderColor:'#003366', backgroundColor:'rgba(0,51,102,0.15)', tension:0.3, fill:true },
+      { label:'Ticket Chiuso', data:[15,20,22,28,30,33,38,36,40,43,47,50], borderColor:'#00A050', backgroundColor:'rgba(0,160,80,0.12)', tension:0.3, fill:true }
+    ]
+  },
+  options:{ responsive:true, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true } } }
+});
+</script>
+
+</body>
+</html>
